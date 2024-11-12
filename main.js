@@ -12,12 +12,12 @@ const client = new Client({
   ]
 });
 
-let cronExp = '0 29 11 * * 1,2,3,4,5 *'
+let cronExp = '0 0 10 * * 1,2,3,4,5 *'
 
 TOKEN = process.env.TOKEN;
 let tutorialMessage = null;
 let dailyMessage = {};
-const userEntries = {};
+let userEntries = {};
 const channelId = process.env.CHANNEL_ID;
 let repeatDayNums = cronExp.split(' ')[5]
 const dayTable = { '0': '일', '1': '월', '2': '화', '3': '수', '4': '목', '5': '금', '6': '토' }
@@ -33,6 +33,7 @@ if (repeatDayNums == '*') {
   }
   repeatDays = repeatDays.slice(0, -2)
 }
+
 informText = `\`${repeatDays}\` \`${cronExp.split(' ')[2].padStart(2, '0')}시 ${cronExp.split(' ')[1].padStart(2, '0')}분\`마다 새로운 스크럼이 생성됩니다.`;
 
 
@@ -52,6 +53,8 @@ client.on('ready', async () => {
       cron.schedule(cronExp, async () => {
         const date = moment().tz('Asia/Seoul').format('YYYY-MM-DD');
         const dayOfWeek = moment(date).tz('Asia/Seoul').format('dd');
+        dailyMessage = {}
+        userEntries = {}
         dailyMessage[date] = await channel.send(`## ~~                            ~~**${date} (${dayOfWeek})**~~                            ~~\n가장 먼저 오늘의 스크럼을 작성해보세요!\n${informText}`);
 
       });
@@ -68,7 +71,7 @@ client.on('messageCreate', async (message) => {
   if (message.channel.id !== channelId) return;
 
   const userId = message.author.id;
-  const userTag = message.author.username;
+  const userTag = message.author.nickname;
   const content = message.content;
   const date = moment().tz('Asia/Seoul').format('YYYY-MM-DD');
   const dayOfWeek = moment(date).tz('Asia/Seoul').format('dd');
@@ -87,7 +90,7 @@ client.on('messageCreate', async (message) => {
     if (userEntries[date] && userEntries[date][userId]) {
       trimmed = message.content.trim()
       if (trimmed == '!delete' || trimmed == '!delete *' || trimmed == '!del' || trimmed == '!del *') {
-        userEntries[date][userId] = { userTag, yesterday: '  - -\n', today: '  - -\n', condition: '? / 10' }
+        userEntries[date][userId] = { userTag: nickname, yesterday: '  - -\n', today: '  - -\n', condition: '? / 10' }
       }
       if (message.content.includes('1')) {
         userEntries[date][userId].yesterday = '  - -\n'
@@ -136,7 +139,7 @@ function parseUserInput(userId, userTag, date, content) {
     if (!target) continue;
 
     if (target === 'yesterday' || target === 'today') {
-      userData[target] = userData[target] === '  - -' ? `  - ${text}\n` : userData[target].concat(`  - ${text}\n`);
+      userData[target] = userData[target] === '  - -\n' ? `  - ${text}\n` : userData[target].concat(`  - ${text}\n`);
     } else if (target === 'condition') {
       const intText = parseInt(text);
       if (Number.isInteger(intText) && 0 <= intText && intText < 11) {
